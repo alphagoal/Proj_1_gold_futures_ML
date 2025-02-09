@@ -1,0 +1,50 @@
+{
+    "job_id": "GLBX-20250206-SG6EEG8KDQ",
+    "files": [
+        {
+            "filename": "condition.json",
+            "size": 551136,
+            "hash": "sha256:e8699b60593b9127ded104a2fc7a4a5b7985ad452c5f97daf072c8c00bbac073",
+            "urls": {
+                "https": "https://api.databento.com/v0/batch/download/JNF86XCF/GLBX-20250206-SG6EEG8KDQ/condition.json",
+                "ftp": "ftp://ftp.databento.com/JNF86XCF/GLBX-20250206-SG6EEG8KDQ/condition.json"
+            }
+        },
+        {
+            "filename": "metadata.json",
+            "size": 683,
+            "hash": "sha256:89f540529821b3ddc6822fb05fb2168f298291bb01d9d180202d672d966f0582",
+            "urls": {
+                "https": "https://api.databento.com/v0/batch/download/JNF86XCF/GLBX-20250206-SG6EEG8KDQ/metadata.json",
+                "ftp": "ftp://ftp.databento.com/JNF86XCF/GLBX-20250206-SG6EEG8KDQ/metadata.json"
+            }
+        },
+        {
+            "filename": "symbology.json",
+            "size": 2506942,
+            "hash": "sha256:e59d16768b0f82f9d384a9726a20e84a2462df6e1974a166ca6109a1781f46c5",
+            "urls": {
+                "https": "https://api.databento.com/v0/batch/download/JNF86XCF/GLBX-20250206-SG6EEG8KDQ/symbology.json",
+                "ftp": "ftp://ftp.databento.com/JNF86XCF/GLBX-20250206-SG6EEG8KDQ/symbology.json"
+            }
+        },
+        {
+            "filename": "symbology.csv",
+            "size": 58272431,
+            "hash": "sha256:85190926cd2f111226a214142304e696dbb7e253890862aae908606fe61aaabe",
+            "urls": {
+                "https": "https://api.databento.com/v0/batch/download/JNF86XCF/GLBX-20250206-SG6EEG8KDQ/symbology.csv",
+                "ftp": "ftp://ftp.databento.com/JNF86XCF/GLBX-20250206-SG6EEG8KDQ/symbology.csv"
+            }
+        },
+        {
+            "filename": "glbx-mdp3-20100606-20250204.ohlcv-1d.csv",
+            "size": 14491709,
+            "hash": "sha256:37bb18d1e861098c7ce4442e369ceef78f073d420ac2abe50fe1f4dee01a7123",
+            "urls": {
+                "https": "https://api.databento.com/v0/batch/download/JNF86XCF/GLBX-20250206-SG6EEG8KDQ/glbx-mdp3-20100606-20250204.ohlcv-1d.csv",
+                "ftp": "ftp://ftp.databento.com/JNF86XCF/GLBX-20250206-SG6EEG8KDQ/glbx-mdp3-20100606-20250204.ohlcv-1d.csv"
+            }
+        }
+    ]
+}
