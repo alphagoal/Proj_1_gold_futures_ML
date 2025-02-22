@@ -7,6 +7,11 @@ import warnings
 warnings.filterwarnings("ignore")
 from sklearn.metrics import r2_score
 
+
+"""
+I. Functions for model construction
+"""
+
 # 1-month risk-free return accumulated from overnight LIBOR rate
 def calculate_monthly_log_rf_ret(date_now,col):
     start_date = date_now - pd.DateOffset(months=1)
@@ -36,6 +41,12 @@ def build_preprocessor(x1_standarize, x1x2_standardize,X1,X2,X):
     else:
         return None
 
+
+"""
+II. Calculate Trading Return and Plot result
+"""
+
+
 # This is to plot the net value changes for all four trading strategies (Random forest, LASSO) (Long-short, Long-only)
 def trading_plot(gc_data,GC_type,fwd_ret_period,monthly_risk_free_rate,excess_ret_benchmark,learning_result, transaction_cost=[0, 0.002, 0.004, 0.01], benchmark_bp=0.000):
     long_short_result = pd.DataFrame(learning_result)
@@ -59,38 +70,41 @@ def trading_plot(gc_data,GC_type,fwd_ret_period,monthly_risk_free_rate,excess_re
            Returns:
            pd.Series: A series containing 'strategy_return' and 'strategy_action'.
            """
+           
         # Extract the predicted return for the given row
         ret_pred = row[ret_pred_column]
+        
         # Get the risk-free rate for the corresponding date
         rf_rate = monthly_risk_free_rate.loc[pd.to_datetime(row.name), f"US000{fwd_ret_period}M Index"]
+        
         # Initialize strategy action and return
         strategy_action = "none"
         strategy_return = 0  # just in case
+        
         # Long-short strategy: Take long positions on high expected excess returns and short positions on low excess expected returns
         # and buy the risk-free rate when the expected excess return is near 0
-        if strategy == "long_short":
-            if ret_pred > excess_ret_benchmark:  # If the predicted excess return is higher than the threshold, go long
-                strategy_action = "long"
-                strategy_return = matching_ret[row.name] / fwd_ret_period * 1 - tc
-            # If the predicted excess return is around 0
-            # excess return is ret_real-rf, we would only short if the excess return is not only less than the -rf, but the real return also need to less than the -rf
-            # hence abs(excess_return）< 2rf
-            elif (0 < ret_pred < excess_ret_benchmark) or (abs(ret_pred) < 2 * rf_rate and ret_pred < 0):
-                strategy_action = "risk_free"
-                strategy_return = rf_rate - tc
-            # we short when the real return less than 0 and absolute value greater than rf
-            elif ret_pred < 0 and abs(ret_pred) > 2 * rf_rate:
+        """ Remarks: Strategy Return = Realized Return / Length of holding period  
+        <-- We invest a portion of (1/length of holding period every month), achieving monthly averaging effect
+        """
+        
+        if ret_pred > excess_ret_benchmark:  # If the predicted excess return is higher than the threshold, go long
+            strategy_action = "long"
+            strategy_return = matching_ret[row.name] / fwd_ret_period * 1 - tc
+            
+        # If the predicted excess return is around 0
+        # excess return is ret_real-rf, we would only short if the excess return is not only less than the -rf, but the real return also need to less than the -rf
+        # hence abs(excess_return）< 2rf
+        
+        elif (0 < ret_pred < excess_ret_benchmark) or (abs(ret_pred) < 2 * rf_rate and ret_pred < 0):
+            strategy_action = "risk_free"
+            strategy_return = rf_rate - tc
+            
+        # we short when the real return less than 0 and absolute value greater than rf
+        elif ret_pred < 0 and abs(ret_pred) > 2 * rf_rate:
+            if strategy == "long_short":
                 strategy_action = "short"
                 strategy_return = matching_ret[row.name] / fwd_ret_period * (-1) - tc
-        else:
-            # we don't do short here, only long and buy risk-free rate
-            if ret_pred > excess_ret_benchmark:
-                strategy_action = "long"
-                strategy_return = matching_ret[row.name] / fwd_ret_period * 1 - tc
-            elif (0 < ret_pred < excess_ret_benchmark) or (abs(ret_pred) < 2 * rf_rate and ret_pred < 0):
-                strategy_action = "risk_free"
-                strategy_return = rf_rate - tc
-            elif ret_pred < 0 and abs(ret_pred) > 2 * rf_rate:
+            else: #long-only strategy
                 strategy_action = "risk_free"
                 strategy_return = rf_rate - tc
 
@@ -117,12 +131,15 @@ def trading_plot(gc_data,GC_type,fwd_ret_period,monthly_risk_free_rate,excess_re
     # calculate buy & hold return
     long_short_result["buy_and_hold_return"] = gc_data[f"{GC_type}_Monthly_raw_Return"].loc[long_short_result.index]
 
-    # calculate cumulative return for all strategies
+
+    # calculate cumulative return for LONG-SHORT STRATEGY
     long_short_result["cumulative_benchmark"] = np.exp(long_short_result["benchmark_return"].cumsum())
     long_short_result["cumulative_buy_and_hold"] = np.exp(long_short_result["buy_and_hold_return"].cumsum())
     long_short_result['cumulative_risk_free'] = np.exp(monthly_risk_free_rate[f"US000{fwd_ret_period}M Index"].cumsum())
     long_short_result = long_short_result.dropna()
 
+
+    # calculate cumulative return for LONG-ONLY STRATEGY
     long_result = pd.DataFrame(learning_result)
     if "Date" in long_result.columns:
         long_result.set_index("Date", inplace=True)
@@ -131,6 +148,7 @@ def trading_plot(gc_data,GC_type,fwd_ret_period,monthly_risk_free_rate,excess_re
             calculate_strategy_return, axis=1, args=("ret_pred", tc, "long"))
         long_result[f"cumulative_strategy_{int(tc * 10000)}bp"] = np.exp(
             long_result[f"strategy_return_{int(tc * 10000)}bp"].cumsum())
+
 
     # calculate benchmark return
     long_result[["benchmark_return", "benchmark_action"]] = long_result.apply(calculate_strategy_return, axis=1, args=(
@@ -185,7 +203,12 @@ def trading_plot(gc_data,GC_type,fwd_ret_period,monthly_risk_free_rate,excess_re
     plt.show()
     return long_short_result, long_result
 
+"""
+III A. Additional pereformance metrics - Win Rate Evaluation and Plot
+"""
 # This is to add varies performance matrices to the dataframe to display
+
+# Calculate win rate and SSE
 def add_performance_matrices(df):
     #Calculate win rate for strategy and benchmark.
     # Ensure required columns exist
@@ -197,6 +220,7 @@ def add_performance_matrices(df):
     df["strategy_win_rate"] = (df["ret_pred"] * df["ret_real"]) > 0
     # Calculate benchmark win rate
     df["benchmark_win_rate"] = (df["historical_mean"] * df["ret_real"]) > 0
+    
     df["strategy_correct_percent"] = 1-np.where(
     df["strategy_win_rate"],  # Condition: Only calculate when strategy_win_rate is True
     (1 - (abs(abs(df["ret_real"]) - abs(df["ret_pred"])) / (abs(df["ret_real"]) + abs(df["ret_pred"])))),  # Compute strategy correctness percentage
@@ -205,6 +229,7 @@ def add_performance_matrices(df):
     df["benchmark_win_rate"],  # Condition: Only calculate when strategy_win_rate is True
     (1 - (abs(abs(df["ret_real"]) - abs(df["historical_mean"])) / (abs(df["ret_real"]) + abs(df["historical_mean"])))),  # Compute strategy correctness percentage
     2)    # Set to -1 when strategy_win_rate is False
+    
      # Calculate SSE (Sum of Squared Errors) for strategy and benchmark
     df["strategy_SSE"] = (df["ret_real"] - df["ret_pred"]) ** 2
     df["benchmark_SSE"] = (df["ret_real"] - df["historical_mean"]) ** 2
@@ -241,6 +266,11 @@ def plot_win_rate(df, column_name, title):
     plt.show()
 
 
+"""
+III B. Additional pereformance metrics - overall strategy sharpe ratio, max drawdown, win rate, R square, drawdown
+"""
+
+# Calculate sharpe ratio, max drawdown, win rate, R square
 def performance_calculator(model_result,monthly_risk_free_rate,fwd_ret_period,transaction_cost,benchmark_bp=0):
     performance_metrics = []
 
@@ -313,6 +343,7 @@ def performance_calculator(model_result,monthly_risk_free_rate,fwd_ret_period,tr
                                   columns=["Strategy", "Transaction Cost", "Final Net Value", "Annualized Return",
                                            "Sharpe Ratio", "Max Drawdown", "Win Rate", "R2"])
     return performance_df
+
 
 # calculate the cumulative and max drawdown of each time step
 def calculate_drawdowns(df,transaction_cost):
