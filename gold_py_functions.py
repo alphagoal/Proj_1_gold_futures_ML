@@ -48,7 +48,7 @@ II. Calculate Trading Return and Plot result
 
 
 # This is to plot the net value changes for all four trading strategies (Random forest, LASSO) (Long-short, Long-only)
-def trading_plot(gc_data,GC_type,fwd_ret_period,monthly_risk_free_rate,excess_ret_benchmark,learning_result, transaction_cost=[0, 0.002, 0.004, 0.01], benchmark_bp=0.000):
+def trading_plot(gc_data,GC_type,fwd_ret_period,monthly_risk_free_rate,excess_ret_thershold,learning_result, transaction_cost=[0, 0.002, 0.004, 0.01], benchmark_bp=0.000):
     long_short_result = pd.DataFrame(learning_result)
     # if "Date" is not index, set it to index
     if "Date" in long_short_result.columns:
@@ -87,7 +87,7 @@ def trading_plot(gc_data,GC_type,fwd_ret_period,monthly_risk_free_rate,excess_re
         <-- We invest a portion of (1/length of holding period every month), achieving monthly averaging effect
         """
         
-        if ret_pred > excess_ret_benchmark:  # If the predicted excess return is higher than the threshold, go long
+        if ret_pred > excess_ret_thershold:  # If the predicted excess return is higher than the threshold, go long
             strategy_action = "long"
             strategy_return = matching_ret[row.name] / fwd_ret_period * 1 - tc
             
@@ -95,7 +95,7 @@ def trading_plot(gc_data,GC_type,fwd_ret_period,monthly_risk_free_rate,excess_re
         # excess return is ret_real-rf, we would only short if the excess return is not only less than the -rf, but the real return also need to less than the -rf
         # hence abs(excess_return）< 2rf
         
-        elif (0 < ret_pred < excess_ret_benchmark) or (abs(ret_pred) < 2 * rf_rate and ret_pred < 0):
+        elif (0 < ret_pred < excess_ret_thershold) or (abs(ret_pred) < 2 * rf_rate and ret_pred < 0):
             strategy_action = "risk_free"
             strategy_return = rf_rate - tc
             
