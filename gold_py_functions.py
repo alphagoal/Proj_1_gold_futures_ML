@@ -8,6 +8,12 @@ warnings.filterwarnings("ignore")
 from sklearn.metrics import r2_score
 
 
+#Remarks: 
+#For the "benchamrk" designed by Sicheng here, it actually refers to the historical mean.
+#There is an intuition that if we use historical mean +ve or -ve sign for decision, what the return will be
+#While it is decided not to be used and presented for the assignement, 
+#it is hard to remove all "benchamrk" code because it is linked with other functions. 
+
 """
 I. Functions for model construction
 """
@@ -123,7 +129,7 @@ def trading_plot(gc_data,GC_type,fwd_ret_period,monthly_risk_free_rate,excess_re
         long_short_result[f"cumulative_strategy_{int(tc * 10000)}bp"] = np.exp(
             long_short_result[f"strategy_return_{int(tc * 10000)}bp"].cumsum())
 
-    # calculate benchmark return
+    # calculate benchmark return #Remarks! "benchmark return" actually refers to hist_mean return in this function. Don't get confused.
     long_short_result[["benchmark_return", "benchmark_action"]] = long_short_result.apply(calculate_strategy_return,
                                                                                           axis=1, args=(
         "historical_mean", benchmark_bp, "long_short"))
@@ -217,18 +223,21 @@ def add_performance_matrices(df):
         raise ValueError(f"DataFrame must contain columns: {required_cols}")
 
     # Calculate strategy win rate
-    df["strategy_win_rate"] = (df["ret_pred"] * df["ret_real"]) > 0
-    # Calculate benchmark win rate
-    df["benchmark_win_rate"] = (df["historical_mean"] * df["ret_real"]) > 0
+    df["strategy_correct_guess"] = (df["ret_pred"] * df["ret_real"]) > 0
     
-    df["strategy_correct_percent"] = 1-np.where(
-    df["strategy_win_rate"],  # Condition: Only calculate when strategy_win_rate is True
-    (1 - (abs(abs(df["ret_real"]) - abs(df["ret_pred"])) / (abs(df["ret_real"]) + abs(df["ret_pred"])))),  # Compute strategy correctness percentage
-    2)    # Set to -1 when strategy_win_rate is False
-    df["benchmark_correct_percent"] = 1-np.where(
-    df["benchmark_win_rate"],  # Condition: Only calculate when strategy_win_rate is True
-    (1 - (abs(abs(df["ret_real"]) - abs(df["historical_mean"])) / (abs(df["ret_real"]) + abs(df["historical_mean"])))),  # Compute strategy correctness percentage
-    2)    # Set to -1 when strategy_win_rate is False
+    # Calculate benchmark win rate
+    df["hist_mean_correct_guess"] = (df["historical_mean"] * df["ret_real"]) > 0
+    
+    # #No longer Used
+    # df["strategy_correct_percent"] = 1-np.where(
+    # df["strategy_correct_guess"],  # Condition: Only calculate when strategy_correct_guess is True
+    # (1 - (abs(abs(df["ret_real"]) - abs(df["ret_pred"])) / (abs(df["ret_real"]) + abs(df["ret_pred"])))),  # Compute strategy correctness percentage
+    # 2)    # Set to -1 when strategy_correct_guess is False
+    
+    # df["benchmark_correct_percent"] = 1-np.where(
+    # df["hist_mean_correct_guess"],  # Condition: Only calculate when strategy_correct_guess is True
+    # (1 - (abs(abs(df["ret_real"]) - abs(df["historical_mean"])) / (abs(df["ret_real"]) + abs(df["historical_mean"])))),  # Compute strategy correctness percentage
+    # 2)    # Set to -1 when strategy_correct_guess is False
     
      # Calculate SSE (Sum of Squared Errors) for strategy and benchmark
     df["strategy_SSE"] = (df["ret_real"] - df["ret_pred"]) ** 2
@@ -279,7 +288,7 @@ def performance_calculator(model_result,monthly_risk_free_rate,fwd_ret_period,tr
         excess_returns = returns - risk_free_rate
         annualized_excess_return = (np.exp(excess_returns.sum())) ** (1 / (len(risk_free_rate) / 12)) - 1
         annualized_std = returns.std() * (np.sqrt(12))
-        return annualized_excess_return / annualized_std if excess_returns.std() != 0 else np.nan
+        return annualized_excess_return / annualized_std if excess_returns.std() != 0 else np.nan  #period holding Sharpe ratio 
 
     def calculate_max_drawdown(cumulative_returns):
         """ Calculate the max drawdown """
@@ -309,39 +318,39 @@ def performance_calculator(model_result,monthly_risk_free_rate,fwd_ret_period,tr
         sharpe_ratio = calculate_sharpe_ratio(model_result[col_name_return],
                                               monthly_risk_free_rate[f"US000{fwd_ret_period}M Index"])
         max_drawdown = calculate_max_drawdown(model_result[col_name_cum])
-        strategy_win_rate = calculate_win_rate(model_result['strategy_win_rate'])
+        strategy_correct_guess = calculate_win_rate(model_result['strategy_correct_guess'])
         strategy_r2 = calculate_r_square(model_result, True)
         performance_metrics.append(
             ["Strategy", f"{int(tc * 10000)}bp", final_net_value, annualized_return, sharpe_ratio, max_drawdown,
-             strategy_win_rate, strategy_r2])
+             strategy_correct_guess, strategy_r2])
 
-    # Calculate performance matrices for the benchmark
-    final_net_value_benchmark = model_result["cumulative_benchmark"].iloc[-1]
+    #Calculate performance matrices for the benchmark
+    final_total_value_benchmark = model_result["cumulative_benchmark"].iloc[-1]
     annualized_return_benchmark = np.exp(model_result["benchmark_return"].sum()) ** (
-                1 / len(model_result["benchmark_return"]) / 12) - 1
+                1 / (len(model_result["benchmark_return"]) / 12)) - 1
     sharpe_ratio_benchmark = calculate_sharpe_ratio(model_result["benchmark_return"],
                                                     monthly_risk_free_rate[f"US000{fwd_ret_period}M Index"])
     max_drawdown_benchmark = calculate_max_drawdown(model_result["cumulative_benchmark"])
-    benchmark_win_rate = calculate_win_rate(model_result['benchmark_win_rate'])
+    hist_mean_correct_guess = calculate_win_rate(model_result['hist_mean_correct_guess'])
     benchmark_r2 = calculate_r_square(model_result, False)
-    performance_metrics.append(
-        ["Benchmark", f"{int(benchmark_bp * 10000)}bp", final_net_value_benchmark, annualized_return_benchmark,
-         sharpe_ratio_benchmark, max_drawdown_benchmark, benchmark_win_rate, benchmark_r2])
+    # performance_metrics.append(
+    #     ["Benchmark", f"{int(benchmark_bp * 10000)}bp", final_total_value_benchmark, annualized_return_benchmark,
+    #      sharpe_ratio_benchmark, max_drawdown_benchmark, hist_mean_correct_guess, benchmark_r2]) #not used for presentation at the moment
 
     # Calculate performance matrices for buy & hold
-    final_net_value_bh = model_result["cumulative_buy_and_hold"].iloc[-1]
+    final_total_value_bh = model_result["cumulative_buy_and_hold"].iloc[-1]
     annualized_return_bh = np.exp(model_result["buy_and_hold_return"].sum()) ** (
-                1 / len(model_result["benchmark_return"]) / 12) - 1
+                1 / (len(model_result["benchmark_return"]) / 12)) - 1
     sharpe_ratio_bh = calculate_sharpe_ratio(model_result["buy_and_hold_return"],
                                              monthly_risk_free_rate[f"US000{fwd_ret_period}M Index"])
     max_drawdown_bh = calculate_max_drawdown(model_result["cumulative_buy_and_hold"])
     performance_metrics.append(
-        ["Buy & Hold", "-", final_net_value_bh, annualized_return_bh, sharpe_ratio_bh, max_drawdown_bh, np.nan])
+        ["Buy & Hold", "-", final_total_value_bh, annualized_return_bh, sharpe_ratio_bh, max_drawdown_bh, np.nan])
 
     # create the performance DataFrame
     performance_df = pd.DataFrame(performance_metrics,
-                                  columns=["Strategy", "Transaction Cost", "Final Net Value", "Annualized Return",
-                                           "Sharpe Ratio", "Max Drawdown", "Win Rate", "R2"])
+                                  columns=["Strategy", "Transaction Cost", "Final Value Per Dollar Invested", "Annualized Return",
+                                           f"{fwd_ret_period}M Sharpe Ratio", "Max Drawdown", "Win Rate", "R2"])
     return performance_df
 
 
