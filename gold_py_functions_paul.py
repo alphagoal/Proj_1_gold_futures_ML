@@ -109,6 +109,7 @@ def trading_plot_2(gc_data,GC_type,fwd_ret_period,monthly_risk_free_rate,excess_
 
         # calculate cumulative return for LONG-ONLY STRATEGY
         long_result = pd.DataFrame(learning_result)
+        
         if "Date" in long_result.columns:
             long_result.set_index("Date", inplace=True)
         for tc in transaction_cost:
